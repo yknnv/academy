@@ -1,0 +1,63 @@
+version: '2'
+
+services:
+    php:
+        build: ./${PHP_VERSION}
+        container_name: php
+        volumes_from:
+            - source
+        ports:
+            - '${INTERFACE}:9999:9999'
+        links:
+            - mysql
+        networks:
+            - bitrix
+        restart: always
+    nginx:
+        build: ./nginx
+        container_name: nginx
+        depends_on:
+            - source
+        volumes_from:
+            - source
+        ports:
+            - '${INTERFACE}:80:80'
+        links:
+            - php
+        networks: 
+            - bitrix
+        restart: always
+    mysql:
+        build: ./mysql
+        container_name: mysql
+        volumes_from:
+            - source
+        ports:
+            - '${INTERFACE}:3306:3306'
+        environment:
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+        networks:
+            - bitrix
+        restart: always
+    source:
+        image: alpine:latest
+        container_name: source
+        volumes:
+            - ./logs/nginx:/var/log/nginx
+            - ./logs/php:/var/log/php
+            - ./logs/mysql:/var/log/mysql
+            - ./data/mysql:/var/lib/mysql
+            - ./www:/var/www
+            #- /etc/localtime:/etc/localtime/:ro
+        networks:
+            - bitrix
+networks:
+    bitrix:
+        driver: bridge
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.100.0.0/24
